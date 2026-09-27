@@ -62,6 +62,12 @@ bash <(curl -fsSL https://gitlab.com/polesniesoveti12-group1/web-panel-proxy/-/r
 
 Команда загружает установщик стабильного релиза `v2.4.2` из GitLab. Установщик запросит домен, email для HTTPS-сертификата, логин и пароль панели. После установки он покажет адрес панели и данные для входа.
 
+### Готовый архив
+
+[Скачать WEB-PANEL-PROXY-V-2.4.2-GITLAB-OPENFLUX-DOCUMENT-LINK.zip](https://gitlab.com/polesniesoveti12-group1/web-panel-proxy/-/raw/main/WEB-PANEL-PROXY-V-2.4.2-GITLAB-OPENFLUX-DOCUMENT-LINK.zip)
+
+SHA-256: `FDCA12403060248ACB0FAE1CE21B8BA44A4103FB4B1D220646FBE70C9692AE73`
+
 ### После установки
 
 1. Сохраните адрес панели, логин, пароль и Node API token в безопасном месте.
