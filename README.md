@@ -57,16 +57,16 @@ sudo -i
 ### Установка
 
 ```bash
-bash <(curl -fsSL https://gitlab.com/polesniesoveti12-group1/web-panel-proxy/-/raw/v2.4.2/install.sh)
+bash <(curl -fsSL https://gitlab.com/POLESNIESOVETI12/web-panel-proxy/-/raw/v2.4.2/install.sh)
 ```
 
 Команда загружает установщик стабильного релиза `v2.4.2` из GitLab. Установщик запросит домен, email для HTTPS-сертификата, логин и пароль панели. После установки он покажет адрес панели и данные для входа.
 
 ### Готовый архив
 
-[Скачать WEB-PANEL-PROXY-V-2.4.2-GITLAB-OPENFLUX-DOCUMENT-LINK.zip](https://gitlab.com/polesniesoveti12-group1/web-panel-proxy/-/raw/main/WEB-PANEL-PROXY-V-2.4.2-GITLAB-OPENFLUX-DOCUMENT-LINK.zip)
+[Скачать WEB-PANEL-PROXY-V-2.4.2-GITLAB-OPENFLUX-DOCUMENT-LINK.zip](https://gitlab.com/POLESNIESOVETI12/web-panel-proxy/-/raw/main/WEB-PANEL-PROXY-V-2.4.2-GITLAB-OPENFLUX-DOCUMENT-LINK.zip)
 
-SHA-256: `FDCA12403060248ACB0FAE1CE21B8BA44A4103FB4B1D220646FBE70C9692AE73`
+SHA-256: `A4E63D82DB4B224EA96917350B456402D6D2915442D9DAC669C4C777E5C8D188`
 
 ### После установки
 
@@ -135,7 +135,7 @@ ss -lntup
 
 ## Ссылки
 
-- [GitLab проекта](https://gitlab.com/polesniesoveti12-group1/web-panel-proxy)
+- [GitLab проекта](https://gitlab.com/POLESNIESOVETI12/web-panel-proxy)
 - [YouTube автора](https://www.youtube.com/@POLESNIESOVETI12)
 
 ## Лицензия

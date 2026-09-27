@@ -12,7 +12,7 @@ ROOT = Path('/var/lib/web-panel-proxy-update')
 STATUS = ROOT / 'status.json'
 VERSION = Path('/etc/web-proxy-panel/version')
 UNIT = 'web-panel-proxy-web-update.service'
-REPO = 'https://gitlab.com/polesniesoveti12-group1/web-panel-proxy.git'
+REPO = 'https://gitlab.com/POLESNIESOVETI12/web-panel-proxy.git'
 UPDATER = '/usr/local/sbin/web-panel-proxy-update'
 
 

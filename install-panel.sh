@@ -3460,5 +3460,5 @@ echo "YouTube:"
 echo "  https://www.youtube.com/@POLESNIESOVETI12"
 echo
 echo "GitLab:"
-echo "  https://gitlab.com/polesniesoveti12-group1/web-panel-proxy"
+echo "  https://gitlab.com/POLESNIESOVETI12/web-panel-proxy"
 echo "============================================================"
