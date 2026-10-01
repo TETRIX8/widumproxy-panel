@@ -6,6 +6,7 @@ import re
 import shutil
 import subprocess
 import sys
+import tempfile
 import time
 import traceback
 
@@ -16,7 +17,6 @@ PROC = Path('/proc')
 SERVICES = {'xray': 'web-panel-proxy-xray.service', 'panel': 'tproxy-panel.service',
             'caddy': 'caddy.service', 'relay': 'tproxy-server.service'}
 OPENFLUX_PROFILES = Path('/etc/web-proxy-panel/openflux/profiles')
-AWG_CONFIGS = Path('/etc/web-proxy-panel/awg')
 
 
 def read_state(path=None):
@@ -30,13 +30,19 @@ def read_state(path=None):
 
 def atomic_json(path, value):
     path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
-    tmp = path.with_suffix('.tmp')
-    with tmp.open('w', encoding='utf-8') as f:
-        json.dump(value, f, ensure_ascii=True, separators=(',', ':'))
-        f.flush()
-        os.fsync(f.fileno())
-    os.chmod(tmp, 0o600)
-    os.replace(tmp, path)
+    fd, temporary = tempfile.mkstemp(prefix=path.name + '.', dir=str(path.parent))
+    try:
+        with os.fdopen(fd, 'w', encoding='utf-8') as f:
+            json.dump(value, f, ensure_ascii=True, separators=(',', ':'))
+            f.flush()
+            os.fsync(f.fileno())
+        os.chmod(temporary, 0o600)
+        os.replace(temporary, path)
+    finally:
+        try:
+            os.unlink(temporary)
+        except FileNotFoundError:
+            pass
 
 
 def proc_text(name):
@@ -79,26 +85,6 @@ def _openflux_snapshot():
             'active_profiles': len(active), 'profiles': len(units)}
 
 
-def _awg_snapshot():
-    try:
-        profile_ids = sorted(entry.stem for entry in AWG_CONFIGS.glob('*.conf')
-                             if re.fullmatch(r'[0-9a-f]{16}', entry.stem))
-    except OSError:
-        profile_ids = []
-    if not profile_ids:
-        return {'state':'inactive','active_profiles':0,'profiles':0}
-    states = [_service_fields('web-panel-proxy-awg@' + profile_id + '.service') for profile_id in profile_ids]
-    active = [value for value in states if value.get('state') == 'active']
-    selected = active or states
-    numbers = lambda key: [value[key] for value in selected if value.get(key) is not None]
-    starts=numbers('start_us'); memories=numbers('memory'); tasks=numbers('tasks')
-    return {'state':'active' if active else 'inactive',
-            'memory':sum(memories) if memories else None,
-            'tasks':sum(tasks) if tasks else None,
-            'start_us':min(starts) if starts else None,
-            'active_profiles':len(active),'profiles':len(states)}
-
-
 def service_snapshot():
     result = {}
     for name, unit in SERVICES.items():
@@ -110,10 +96,6 @@ def service_snapshot():
         result['openflux'] = _openflux_snapshot()
     except (OSError, subprocess.TimeoutExpired, ValueError):
         result['openflux'] = {'state': 'unknown'}
-    try:
-        result['awg'] = _awg_snapshot()
-    except (OSError, subprocess.TimeoutExpired, ValueError):
-        result['awg'] = {'state':'unknown'}
     return result
 
 

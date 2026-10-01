@@ -3,15 +3,50 @@ set -Eeuo pipefail
 BASE="$(cd "$(dirname "$0")" && pwd)"
 umask 077
 
+WPP_PROGRESS_TTY=0 WPP_PROGRESS_ROWS=0 WPP_PROGRESS_LAST=-1 WPP_PROGRESS_ACTIVE=0
+wpp_progress_start() {
+    WPP_PROGRESS_ACTIVE=1
+    if [[ -t 1 && "${TERM:-dumb}" != "dumb" ]] && command -v tput >/dev/null 2>&1; then
+        WPP_PROGRESS_ROWS="$(tput lines 2>/dev/null || echo 0)"
+        if (( WPP_PROGRESS_ROWS >= 6 )); then
+            WPP_PROGRESS_TTY=1
+            # Reserve the last row and move the command cursor back inside the
+            # scrolling region.  Leaving it on the reserved row makes apt/curl
+            # overwrite the progress bar on many SSH terminals.
+            printf '\033[1;%dr\033[%d;1H' "$((WPP_PROGRESS_ROWS-1))" "$((WPP_PROGRESS_ROWS-1))"
+        fi
+    fi
+    wpp_progress 0 "$1"
+}
+wpp_progress() {
+    local percent="$1" label="$2" width=28 filled empty bar
+    (( percent < 0 )) && percent=0; (( percent > 100 )) && percent=100
+    filled=$((percent*width/100)); empty=$((width-filled))
+    printf -v bar '%*s' "$filled" ''; bar="${bar// /#}"
+    printf -v empty '%*s' "$empty" ''; bar+="${empty// /-}"
+    if (( WPP_PROGRESS_TTY )); then
+        printf '\0337\033[%d;1H\033[2K[%s] %3d%%  %s\0338' "$WPP_PROGRESS_ROWS" "$bar" "$percent" "$label"
+    elif (( percent != WPP_PROGRESS_LAST )); then
+        printf '[%s] %3d%%  %s\n' "$bar" "$percent" "$label"
+    fi
+    WPP_PROGRESS_LAST="$percent"
+}
+wpp_progress_finish() {
+    local code="$1"
+    (( WPP_PROGRESS_ACTIVE )) || return 0
+    if (( code == 0 )); then wpp_progress 100 "Установка завершена"; else wpp_progress "$WPP_PROGRESS_LAST" "Установка прервана"; fi
+    if (( WPP_PROGRESS_TTY )); then
+        printf '\0337\033[%d;1H\033[2K\0338\033[r\033[%d;1H' "$WPP_PROGRESS_ROWS" "$WPP_PROGRESS_ROWS"
+        printf '[############################] %3d%%  %s\n' "$([[ $code == 0 ]] && echo 100 || echo "$WPP_PROGRESS_LAST")" "$([[ $code == 0 ]] && echo 'Установка завершена' || echo 'Установка прервана')"
+    fi
+}
+
 die() { echo "ERROR: $*" >&2; exit 1; }
-for file in install-panel.sh install-webproxy-core.sh uninstall-web-proxy.sh update.sh panel-logo.png wpp_subscriptions.py wpp_panel_extras.py wpp_ui.py wpp_metrics.py wpp_update.py wpp_nodes.py wpp_openflux.py wpp_awg.py wpp_firewall.py wpp_components.py; do
+for file in install-panel.sh install-webproxy-core.sh uninstall-web-proxy.sh update.sh panel-logo.png wpp_subscriptions.py wpp_panel_extras.py wpp_ui.py wpp_metrics.py wpp_update.py wpp_nodes.py wpp_openflux.py wpp_awg.py wpp_firewall.py wpp_components.py wpp_cdn.py; do
     [[ -s "$BASE/$file" ]] || die "Package is incomplete: missing $file. Extract the complete archive."
 done
 [[ -s "$BASE/assets/OpenFlux-linux-amd64" || -s "$BASE/OpenFlux-linux-amd64" ]] ||
     die "Package is incomplete: missing OpenFlux-linux-amd64. Extract the complete archive."
-for asset in amneziawg-go-linux-amd64 awg-linux-amd64 awg-quick-linux-amd64; do
-    [[ -s "$BASE/assets/$asset" ]] || die "Package is incomplete: missing assets/$asset. Extract the complete archive."
-done
 [[ -s "$BASE/wpp-panel/flags.tar.gz" ]] ||
     die "Package is incomplete: wpp-panel/flags.tar.gz is missing. Extract the complete archive."
 command -v flock >/dev/null 2>&1 || die "flock is required (package: util-linux)."
@@ -23,9 +58,13 @@ cleanup_credentials() {
             rm -f /etc/web-proxy-panel/install-credentials
     fi
 }
-trap cleanup_credentials EXIT
+finish_install() { local code=$?; cleanup_credentials; wpp_progress_finish "$code"; }
+trap finish_install EXIT
 
-echo "WEB PANEL PROXY V 2.4.2: preparing server..."
+wpp_progress_start "Проверка пакета"
+wpp_progress 5 "Подготовка сервера"
+
+echo "WEB PANEL PROXY V 2.4.4: preparing server..."
 
 PANEL_UPDATE=0
 if [[ -s /var/lib/tproxy-panel/data.json ]] &&
@@ -46,14 +85,18 @@ install -o root -g root -m 0755 \
     /usr/local/sbin/web-panel-proxy-uninstall
 
 echo "Installing proxy services..."
-bash "$BASE/install-webproxy-core.sh"
+wpp_progress 10 "Установка прокси-служб"
+WEB_PANEL_PROXY_PACKAGE_VERSION="2.4.4" bash "$BASE/install-webproxy-core.sh"
+wpp_progress 55 "Прокси-службы установлены"
 
 echo "Installing control panel..."
+wpp_progress 60 "Установка панели"
 if [[ "$PANEL_UPDATE" == 1 ]]; then
     WEB_PANEL_PROXY_UPDATE=1 bash "$BASE/install-panel.sh"
 else
     bash "$BASE/install-panel.sh"
 fi
+wpp_progress 92 "Проверка служб"
 
 for unit in caddy.service mtproxy.service tproxy-server.service tproxy-panel.service web-proxy-panel-firewall.service; do
     systemctl is-active --quiet "$unit" || { echo "Installation failed: $unit did not start."; exit 1; }
@@ -62,15 +105,12 @@ systemctl is-enabled --quiet web-proxy-panel-firewall.service ||
     die "Persistent user firewall is not enabled."
 nft list table inet web_proxy_panel >/dev/null 2>&1 ||
     die "Persistent user firewall table is missing."
-nft list table ip web_proxy_awg >/dev/null 2>&1 ||
-    die "AWG routing firewall table is missing."
 [[ -x /opt/web-panel-proxy/xray/xray ]] || die "Xray binary was not installed."
-[[ -x /usr/local/bin/amneziawg-go && -x /usr/local/bin/awg ]] || die "AmneziaWG was not installed."
-/usr/local/bin/awg --version >/dev/null || die "AmneziaWG tools check failed."
 [[ -s /etc/web-panel-proxy-xray/config.json ]] || die "Xray configuration was not created."
 [[ -x /usr/local/sbin/WPP ]] || die "WPP console menu was not installed."
 systemctl is-active --quiet web-panel-proxy-sync-tls.timer ||
     die "The Xray TLS synchronization timer did not start."
 echo "Installation complete."
-printf '%s\n' '2.4.2' > /etc/web-proxy-panel/version
+wpp_progress 100 "Установка завершена"
+printf '%s\n' '2.4.4' > /etc/web-proxy-panel/version
 chmod 0600 /etc/web-proxy-panel/version

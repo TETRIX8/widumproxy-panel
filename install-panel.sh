@@ -109,7 +109,7 @@ fi
 MTPROTO_HOST="${MTPROTO_HOST:-$DOMAIN}"
 [[ -s "$PRIMARY_SECRET" ]] || die "Primary install-time secret not found."
 [[ -s "$LOGO_SOURCE" ]] || die "Panel logo file is missing: panel-logo.png"
-for module in wpp_subscriptions.py wpp_panel_extras.py wpp_ui.py wpp_metrics.py wpp_update.py wpp_nodes.py wpp_openflux.py wpp_awg.py wpp_firewall.py wpp_components.py; do
+for module in wpp_subscriptions.py wpp_panel_extras.py wpp_ui.py wpp_metrics.py wpp_update.py wpp_nodes.py wpp_openflux.py wpp_awg.py wpp_firewall.py wpp_components.py wpp_cdn.py; do
     [[ -s "$BASE/$module" ]] || die "Missing panel module: $module; extract the complete archive."
 done
 FLAG_ARCHIVE="$BASE/wpp-panel/flags.tar.gz"
@@ -125,7 +125,7 @@ if [[ "$UPDATING" == "1" ]]; then
     PANEL_PATH="$EXISTING_PATH"
 fi
 
-echo "      Preparing AmneziaWG 2.0 / 3.1..."
+if false; then # AWG implementation retained only as inert rollback reference.
 AWG_INSTALLED_NOW=0
 if ! command -v ip >/dev/null 2>&1; then
     apt-get -o DPkg::Lock::Timeout=600 update
@@ -262,6 +262,50 @@ net.ipv4.ip_forward=1
 EOF
 chmod 0644 /etc/sysctl.d/90-web-panel-proxy-awg.conf
 /usr/sbin/sysctl -p /etc/sysctl.d/90-web-panel-proxy-awg.conf >/dev/null
+fi
+
+echo "      Removing retired AWG services..."
+while read -r unit _; do
+    [[ "$unit" == web-panel-proxy-awg@*.service ]] || continue
+    systemctl disable --now "$unit" >/dev/null 2>&1 || true
+done < <(systemctl list-units --all --type=service --no-legend --plain 'web-panel-proxy-awg@*.service' 2>/dev/null || true)
+for unit in web-panel-proxy-awg20.service web-panel-proxy-awg31.service; do
+    systemctl disable --now "$unit" >/dev/null 2>&1 || true
+done
+for link in /etc/systemd/system/multi-user.target.wants/web-panel-proxy-awg@*.service; do
+    [[ -L "$link" ]] || continue
+    unit="$(basename "$link")"
+    systemctl disable --now "$unit" >/dev/null 2>&1 || true
+done
+if command -v ufw >/dev/null 2>&1; then
+    while read -r port; do
+        [[ "$port" =~ ^[0-9]{1,5}$ ]] || continue
+        ufw --force delete allow "$port/udp" >/dev/null 2>&1 || true
+    done < <(grep -Eo '[0-9]{1,5}' /etc/web-proxy-panel/awg-ufw-owned 2>/dev/null || true)
+    while read -r input output extra; do
+        [[ -n "$input" && -n "$output" && -z "${extra:-}" ]] || continue
+        ufw --force route delete allow in on "$input" out on "$output" >/dev/null 2>&1 || true
+    done < /etc/web-proxy-panel/awg-route-ufw-owned 2>/dev/null || true
+fi
+while read -r iface; do
+    [[ "$iface" =~ ^wa[a-f0-9]{11}$ ]] || continue
+    /usr/sbin/ip link delete "$iface" >/dev/null 2>&1 || true
+done < <(/usr/sbin/ip -o link show 2>/dev/null | awk -F': ' '{print $2}' | cut -d@ -f1)
+nft delete table ip web_proxy_awg >/dev/null 2>&1 || true
+rm -f /etc/systemd/system/web-panel-proxy-awg@.service \
+      /etc/systemd/system/web-panel-proxy-awg20.service \
+      /etc/systemd/system/web-panel-proxy-awg31.service \
+      /usr/local/sbin/web-panel-proxy-awg-run \
+      /usr/local/sbin/web-panel-proxy-awg-up \
+      /usr/local/sbin/web-panel-proxy-awg-down \
+      /etc/sysctl.d/90-web-panel-proxy-awg.conf \
+      /etc/web-proxy-panel/awg-ufw-owned \
+      /etc/web-proxy-panel/awg-route-ufw-owned
+if [[ -e /etc/web-proxy-panel/awg-owned ]]; then
+    rm -f /usr/local/bin/amneziawg-go /usr/local/bin/awg /usr/local/bin/awg-quick \
+          /etc/web-proxy-panel/awg-owned
+fi
+systemctl daemon-reload
 
 if ! [[ "$ACME_EMAIL" =~ ^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$ ]] && [[ -s /etc/caddy/Caddyfile ]]; then
     ACME_EMAIL="$(sed -n 's/^[[:space:]]*email[[:space:]][[:space:]]*\([^[:space:]]*\)[[:space:]]*$/\1/p' /etc/caddy/Caddyfile | head -n1 || true)"
@@ -392,9 +436,9 @@ XRAY_PATH="$(cat "$XRAY_PATH_FILE")"
 [[ "$XRAY_PATH" =~ ^/vless-[a-f0-9]{24}$ ]] || die "Stored VLESS path is invalid."
 
 if [[ "$UPDATING" == "1" ]]; then
-    echo "Updating WEB PANEL PROXY V 2.4.2..."
+    echo "Updating WEB PANEL PROXY V 2.4.4..."
 else
-    echo "Configuring WEB PANEL PROXY V 2.4.2..."
+    echo "Configuring WEB PANEL PROXY V 2.4.4..."
 fi
 INSTALL_CREDENTIALS="/etc/web-proxy-panel/install-credentials"
 if [[ "$UPDATING" == "1" ]]; then
@@ -427,7 +471,7 @@ fi
 
 echo "[1/6] Writing manager..."
 
-for module in wpp_subscriptions.py wpp_panel_extras.py wpp_ui.py wpp_metrics.py wpp_update.py wpp_nodes.py wpp_openflux.py wpp_awg.py wpp_firewall.py wpp_components.py; do
+for module in wpp_subscriptions.py wpp_panel_extras.py wpp_ui.py wpp_metrics.py wpp_update.py wpp_nodes.py wpp_openflux.py wpp_awg.py wpp_firewall.py wpp_components.py wpp_cdn.py; do
     [[ -s "$BASE/$module" ]] || die "Package is incomplete: $module is missing."
     install -o root -g root -m 0644 "$BASE/$module" "$APP_DIR/$module"
 done
@@ -475,6 +519,7 @@ sys.path.insert(0,"/opt/tproxy-panel")
 from wpp_subscriptions import mutate as mutate_subscription, issue as issue_subscription, SubscriptionError
 import wpp_awg
 import wpp_firewall
+import wpp_cdn
 
 USERS="/etc/web-proxy-panel/users.json"
 PROFILES="/etc/tproxy-server/profiles.json"
@@ -493,6 +538,7 @@ XRAY_KEY="/etc/web-panel-proxy-xray/tls/domain.key"
 XRAY_SERVICE="web-panel-proxy-xray.service"
 XRAY_TLS_SYNC="/usr/local/sbin/web-panel-proxy-sync-tls"
 XRAY_VLESS_PORT=10000
+XRAY_VLESS_CDN_PORT=10001
 XRAY_API="127.0.0.1:10085"
 HYSTERIA_PORT=8443
 CADDYFILE="/etc/caddy/Caddyfile"
@@ -505,6 +551,10 @@ UFW_AWG_ROUTE_MARKER="/etc/web-proxy-panel/awg-route-ufw-owned"
 BASE_PORT=2399
 BASE_STATS=8889
 MAX_USERS=32
+# AWG is temporarily withdrawn from the panel. Existing records remain in
+# users.json so a future tested implementation can restore them without losing
+# keys, but no AWG service, port or forwarding rule is kept active.
+AWG_AVAILABLE=False
 
 def run(*args, check=False, timeout=60):
     p=subprocess.run(args,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True,timeout=timeout)
@@ -607,11 +657,17 @@ def mtproto_secrets(u):
     if not result: result=[normalize_proxy_secret(u.get("secret",""))]
     return result
 
+def direct_secrets(u):
+    values=u.get("device_secrets")
+    if isinstance(values,list) and values:
+        return [str(value) for value in values if value]
+    return [str(u.get("secret",""))]
+
 def write_unit(u):
     if u.get("protocol","web") not in ("web","mtproto"):
         return
     path=os.path.join(UNIT_DIR,f"web-proxy-user-{u['id']}.service")
-    secret_args=" ".join("-S "+value for value in (mtproto_secrets(u) if u.get("protocol")=="mtproto" else [u["secret"]]))
+    secret_args=" ".join("-S "+value for value in (mtproto_secrets(u) if u.get("protocol")=="mtproto" else direct_secrets(u)))
     content=f"""[Unit]
 Description=WEB Proxy User {u['id']}
 After=network-online.target web-proxy-panel-firewall.service
@@ -642,7 +698,6 @@ def sync_firewall(d):
     mtproto_ports=[int(u["backend_port"]) for u in d["users"] if u.get("enabled",True) and u.get("protocol","web")=="mtproto"]
     stats=[int(u["stats_port"]) for u in d["users"] if u.get("enabled",True) and u.get("protocol","web") in ("web","mtproto") and u.get("stats_port")]
     hysteria_enabled=any(u.get("enabled",True) and u.get("protocol")=="hysteria" for u in d["users"])
-    awg_users=[u for u in d["users"] if u.get("enabled",True) and u.get("protocol") in wpp_awg.PROTOCOLS]
     lines=[
         "#!/usr/bin/env bash",
         "set -e",
@@ -673,21 +728,9 @@ def sync_firewall(d):
         lines.append("nft 'add rule inet web_proxy_panel input iifname != \"lo\" tcp dport { %s } counter drop'" % ",".join(map(str,sorted(stats))))
     if hysteria_enabled:
         lines.append("nft 'add rule inet web_proxy_panel input udp dport %d counter accept'" % HYSTERIA_PORT)
-    for u in awg_users:
-        uid=u["id"]; port=int(u["backend_port"])
-        lines.append("nft 'add rule inet web_proxy_panel input iifname != \"lo\" udp dport %d counter accept comment \"wpp:%s:up\"'"%(port,uid))
-        lines.append("nft 'add rule inet web_proxy_panel output oifname != \"lo\" udp sport %d counter accept comment \"wpp:%s:down\"'"%(port,uid))
-    lines.extend([
-        "nft list table ip web_proxy_awg >/dev/null 2>&1 && nft delete table ip web_proxy_awg || true",
-        "nft add table ip web_proxy_awg",
-        "nft 'add chain ip web_proxy_awg forward { type filter hook forward priority -20; policy accept; }'",
-        "nft 'add chain ip web_proxy_awg postrouting { type nat hook postrouting priority srcnat; policy accept; }'"
-    ])
-    for u in awg_users:
-        iface=u["awg_interface"]; network=u["awg_network"]
-        lines.append("nft 'add rule ip web_proxy_awg forward iifname \"%s\" counter accept'" % iface)
-        lines.append("nft 'add rule ip web_proxy_awg forward oifname \"%s\" ct state related,established counter accept'" % iface)
-        lines.append("nft 'add rule ip web_proxy_awg postrouting ip saddr %s oifname != \"%s\" counter masquerade'" % (network,iface))
+    # Remove a legacy AWG table left by older releases.  This build does not
+    # recreate it and therefore cannot leave unused forwarding/NAT hooks.
+    lines.append("nft list table ip web_proxy_awg >/dev/null 2>&1 && nft delete table ip web_proxy_awg || true")
     tmp=FIREWALL_SCRIPT+".tmp"
     with open(tmp,"w",encoding="utf-8") as f: f.write("\n".join(lines)+"\n")
     os.chmod(tmp,0o750)
@@ -701,8 +744,29 @@ def sync_firewall(d):
     external_if=match.group(1) if match else ""
     wpp_firewall.reconcile(
         tcp={80,443,*mtproto_ports},
-        udp=({HYSTERIA_PORT} if hysteria_enabled else set()) | {int(u["backend_port"]) for u in awg_users},
-        routes={(u["awg_interface"],external_if) for u in awg_users if external_if},
+        udp={HYSTERIA_PORT} if hysteria_enabled else set(),
+        routes=set(),
+    )
+
+def maintain_firewall(d):
+    """Repair forwarding after an external UFW/nftables reload."""
+    forward=run("sysctl","-n","net.ipv4.ip_forward")
+    if forward.returncode or (forward.stdout or "").strip()!="1":
+        run("sysctl","-w","net.ipv4.ip_forward=1",check=True)
+    mtproto_ports={int(u["backend_port"]) for u in d["users"] if u.get("enabled",True) and u.get("protocol")=="mtproto"}
+    hysteria_enabled=any(u.get("enabled",True) and u.get("protocol")=="hysteria" for u in d["users"])
+    inet=run("nft","list","table","inet","web_proxy_panel")
+    healthy=inet.returncode==0
+    if not healthy:
+        sync_firewall(d)
+        return
+    route=run("ip","-4","route","show","default").stdout or ""
+    match=re.search(r"\bdev\s+([A-Za-z0-9_.:-]+)",route)
+    external_if=match.group(1) if match else ""
+    wpp_firewall.reconcile(
+        tcp={80,443,*mtproto_ports},
+        udp={HYSTERIA_PORT} if hysteria_enabled else set(),
+        routes=set(),
     )
 
 def sync_profiles(d):
@@ -711,12 +775,13 @@ def sync_profiles(d):
     keep=[p for p in old.get("profiles",[]) if not str(p.get("name","")).startswith("panel:")]
     for u in d["users"]:
         if u.get("enabled",True) and u.get("protocol","web")=="web":
-            keep.append({
-                "name":"panel:"+u["id"],
-                "secret":u["secret"],
-                "backend":"127.0.0.1:%d"%int(u["backend_port"]),
-                "carrier_mode":"https"
-            })
+            for index,secret in enumerate(direct_secrets(u),1):
+                keep.append({
+                    "name":"panel:"+u["id"]+":"+str(index),
+                    "secret":secret,
+                    "backend":"127.0.0.1:%d"%int(u["backend_port"]),
+                    "carrier_mode":"https"
+                })
     tmp=PROFILES+".tmp"
     with open(tmp,"w",encoding="utf-8") as f:
         json.dump({"profiles":keep},f,ensure_ascii=True,indent=2)
@@ -734,15 +799,19 @@ def sync_xray(d):
     if not re.fullmatch(r"/vless-[a-f0-9]{24}",xray_path):
         raise RuntimeError("Invalid stored VLESS path")
     vless=[]
+    vless_cdn=[]
     hysteria=[]
     for u in d["users"]:
         if not u.get("enabled",True):
             continue
         protocol=u.get("protocol","web")
         if protocol=="vless":
-            vless.append({"id":u["secret"],"email":"panel:"+u["id"],"level":0})
+            target=vless_cdn if isinstance(u.get("cdn"),dict) and u["cdn"].get("enabled") else vless
+            for index,secret in enumerate(direct_secrets(u),1):
+                target.append({"id":secret,"email":"panel:"+u["id"]+":"+str(index),"level":0})
         elif protocol=="hysteria":
-            hysteria.append({"auth":u["secret"],"email":"panel:"+u["id"],"level":0})
+            for index,secret in enumerate(direct_secrets(u),1):
+                hysteria.append({"auth":secret,"email":"panel:"+u["id"]+":"+str(index),"level":0})
     inbounds=[]
     if vless:
         inbounds.append({
@@ -755,7 +824,21 @@ def sync_xray(d):
                 # Xray's JSON stream selector is named "network".
                 "network":"xhttp",
                 "security":"none",
-                "xhttpSettings":{"path":xray_path,"mode":"auto"}
+                "xhttpSettings":wpp_cdn.server_xhttp(xray_path)
+            },
+            "sniffing":{"enabled":True,"destOverride":["http","tls","quic"],"routeOnly":True}
+        })
+    if vless_cdn:
+        inbounds.append({
+            "tag":"vless-xhttp-cdn",
+            "listen":"127.0.0.1",
+            "port":XRAY_VLESS_CDN_PORT,
+            "protocol":"vless",
+            "settings":{"clients":vless_cdn,"decryption":"none"},
+            "streamSettings":{
+                "network":"xhttp",
+                "security":"none",
+                "xhttpSettings":wpp_cdn.server_xhttp(xray_path+"-cdn",True)
             },
             "sniffing":{"enabled":True,"destOverride":["http","tls","quic"],"routeOnly":True}
         })
@@ -861,10 +944,11 @@ def _xray_traffic():
     except Exception:
         return result
     for stat in doc.get("stat",[]):
-        m=re.fullmatch(r"user>>>panel:([a-f0-9]+)>>>traffic>>>(uplink|downlink)",str(stat.get("name","")))
+        m=re.fullmatch(r"user>>>panel:([a-f0-9]+)(?::\d+)?>>>traffic>>>(uplink|downlink)",str(stat.get("name","")))
         if not m: continue
         key="up" if m.group(2)=="uplink" else "down"
-        result.setdefault(m.group(1),{"up":0,"down":0})[key]=int(stat.get("value",0))
+        bucket=result.setdefault(m.group(1),{"up":0,"down":0})
+        bucket[key]+=int(stat.get("value",0))
     return result
 
 def _collect_traffic_unlocked(d=None):
@@ -920,6 +1004,35 @@ def collect_traffic(d=None):
         os.chmod(TRAFFIC_LOCK,0o600)
         fcntl.flock(lock.fileno(),fcntl.LOCK_EX)
         return _collect_traffic_unlocked(d)
+
+def enforce_traffic_limits(state):
+    before=load(); after=copy.deepcopy(before); exceeded=[]
+    for user in after.get("users",[]):
+        if user.get("subscription_id") or not user.get("enabled",True):
+            continue
+        limit=max(0,int(user.get("traffic_limit_bytes",0) or 0))
+        if not limit:
+            continue
+        usage=state.get(user.get("id"),{})
+        total=max(0,int(usage.get("up",0)))+max(0,int(usage.get("down",0)))
+        base=max(0,int(user.get("traffic_quota_base",0) or 0))
+        if max(0,total-base)<limit:
+            continue
+        user["enabled"]=False
+        user["disabled_reason"]="traffic_limit"
+        user["traffic_limit_reached_at"]=int(time.time())
+        exceeded.append(user.get("id"))
+    if not exceeded:
+        return []
+    save(after)
+    try:
+        apply(after,True,before)
+    except Exception:
+        save(before)
+        try: apply(before,True,after)
+        except Exception: pass
+        raise
+    return exceeded
 
 def remove_old_units(d):
     keep={"web-proxy-user-"+u["id"]+".service" for u in d["users"] if u.get("enabled",True) and u.get("protocol","web") in ("web","mtproto")}
@@ -1002,36 +1115,42 @@ def apply(d,restart=True,previous=None):
             pass
         raise
 
-def add(protocol,name,requested_port=None,device_count=1):
+def add(protocol,name,requested_port=None,device_count=1,options=None):
     d=load()
     before=copy.deepcopy(d)
+    options=options or {}
     # A failed request from an older manager can leave a systemd unit in an
     # auto-restart loop even though it is absent from users.json. Remove such
     # orphan units before choosing ports for the next user.
     remove_old_units(d)
     run("systemctl","daemon-reload",check=True)
-    if protocol not in ("web","mtproto","vless","hysteria","awg20","awg31"):
+    if protocol not in ("web","mtproto","vless","hysteria"):
         raise RuntimeError("Unknown proxy protocol")
     if sum(not u.get("subscription_id") for u in d["users"])>=MAX_USERS:
         raise RuntimeError("Maximum panel users reached")
-    u={"id":secrets.token_hex(8),"name":name.strip(),"protocol":protocol,"enabled":True,"created_at":int(time.time())}
+    try: device_count=int(device_count)
+    except (TypeError,ValueError): raise ValueError("Количество устройств должно быть числом.")
+    if device_count<1 or device_count>20:
+        raise ValueError("Для отдельного подключения можно создать от 1 до 20 ключей устройств.")
+    try: traffic_limit_gb=float(str(options.get("traffic_limit_gb",0) or 0).replace(",","."))
+    except (TypeError,ValueError): raise ValueError("Лимит трафика должен быть числом.")
+    if traffic_limit_gb<0 or traffic_limit_gb>100000:
+        raise ValueError("Лимит трафика должен быть от 0 до 100000 ГБ.")
+    u={"id":secrets.token_hex(8),"name":name.strip(),"protocol":protocol,"enabled":True,"created_at":int(time.time()),
+       "max_devices":device_count,"traffic_limit_bytes":int(traffic_limit_gb*1024**3)}
     if protocol in ("web","mtproto"):
-        if protocol=="mtproto":
-            try: device_count=int(device_count)
-            except (TypeError,ValueError): raise ValueError("Количество устройств MTProto должно быть числом.")
-            if device_count<1 or device_count>20:
-                raise ValueError("Для MTProto можно создать от 1 до 20 отдельных ключей устройств.")
-        else:
-            device_count=1
         port,stats=alloc_ports(d,requested_port if protocol=="mtproto" else None)
         device_secrets=[secrets.token_hex(16) for _ in range(device_count)]
-        u.update({"secret":device_secrets[0],"backend_port":port,"stats_port":stats})
-        if protocol=="mtproto":
-            u.update({"max_devices":device_count,"device_secrets":device_secrets})
+        u.update({"secret":device_secrets[0],"backend_port":port,"stats_port":stats,"device_secrets":device_secrets})
     elif protocol=="vless":
-        u.update({"secret":str(uuid.uuid4()),"backend_port":443})
+        device_secrets=[str(uuid.uuid4()) for _ in range(device_count)]
+        u.update({"secret":device_secrets[0],"device_secrets":device_secrets,"backend_port":443})
+        cdn_profile=wpp_cdn.profile_from_request(options)
+        if cdn_profile is not None:
+            u["cdn"]=cdn_profile
     elif protocol=="hysteria":
-        u.update({"secret":str(uuid.uuid4()),"backend_port":HYSTERIA_PORT})
+        device_secrets=[str(uuid.uuid4()) for _ in range(device_count)]
+        u.update({"secret":device_secrets[0],"device_secrets":device_secrets,"backend_port":HYSTERIA_PORT})
         tls=run(XRAY_TLS_SYNC)
         if tls.returncode:
             raise RuntimeError("Hysteria 2 TLS certificate is not ready: "+(tls.stderr or tls.stdout)[-1500:])
@@ -1057,7 +1176,7 @@ def add_json(request):
     name=str(request.get("name","")).strip()
     if not name or len(name)>80 or any(ord(c)<32 for c in name):
         raise ValueError("Укажите имя длиной от 1 до 80 символов.")
-    add(protocol,name,request.get("port"),request.get("devices",1))
+    add(protocol,name,request.get("port"),request.get("devices",1),request)
 
 def federation_sync(request):
     external_id=str(request.get("external_id", ""))
@@ -1158,7 +1277,13 @@ def edit_user(uid,enabled=None,name=None):
         raise ValueError('Имя должно содержать от 1 до 80 символов.')
     after=copy.deepcopy(before)
     user=next(u for u in after['users'] if u['id']==uid)
-    if enabled is not None: user['enabled']=enabled
+    if enabled is not None:
+        user['enabled']=enabled
+        if enabled and target.get('disabled_reason')=='traffic_limit':
+            traffic=_load_traffic().get(uid,{})
+            user['traffic_quota_base']=max(0,int(traffic.get('up',0)))+max(0,int(traffic.get('down',0)))
+            user.pop('disabled_reason',None)
+            user.pop('traffic_limit_reached_at',None)
     if name is not None: user['name']=name.strip()
     if after==before: return
     runtime_changed=user.get('enabled',True)!=target.get('enabled',True)
@@ -1264,8 +1389,6 @@ def set_secret(request):
 def init():
     d=load()
     wpp_awg.upgrade_users(d["users"])
-    # Persist stable normalization when upgrading. Profiles from the withdrawn
-    # shared-interface preview receive independent keys, ports and fingerprints.
     save(d)
     for u in d["users"]:
         if u.get("enabled",True): write_unit(u)
@@ -1314,7 +1437,7 @@ def subscription_command():
 cmd=sys.argv[1] if len(sys.argv)>1 else "init"
 # Serialize state changes, including slot allocation, with CLI and the panel.
 # Traffic has its own lock and only reads users.json via atomic replacement.
-if cmd not in ("users","traffic"):
+if cmd not in ("users",):
     manager_lock=open("/etc/web-proxy-panel/manager.lock","a+")
     os.chmod(manager_lock.name,0o600)
     deadline=time.monotonic()+15
@@ -1343,11 +1466,13 @@ elif cmd=="rename-user":
 elif cmd=="set-secret": set_secret(json.load(sys.stdin))
 elif cmd=="sync": apply(load(),True)
 elif cmd=="firewall": sync_firewall(load())
+elif cmd=="firewall-maintain": maintain_firewall(load())
 elif cmd=="traffic":
     traffic_state=collect_traffic()
+    enforce_traffic_limits(traffic_state)
     print(json.dumps(traffic_state,ensure_ascii=True))
 elif cmd=="users": print(json.dumps(load(),ensure_ascii=True))
-else: raise SystemExit("usage: init|add|delete|set-user|rename-user|set-secret|sync|firewall|traffic|users")
+else: raise SystemExit("usage: init|add|delete|set-user|rename-user|set-secret|sync|firewall|firewall-maintain|traffic|users")
 
 PY
 
@@ -1371,6 +1496,13 @@ ExecStop=/bin/sh -c '/usr/sbin/nft delete table inet web_proxy_panel 2>/dev/null
 WantedBy=multi-user.target
 EOF
 chmod 0644 "$FIREWALL_SERVICE_FILE"
+
+# Retire the experimental firewall monitor used by post-2.4.2 RC builds. The
+# restored 2.4.2 AWG stack applies its rules transactionally during changes.
+systemctl disable --now web-proxy-panel-firewall-maintenance.timer \
+    web-proxy-panel-firewall-maintenance.service 2>/dev/null || true
+rm -f /etc/systemd/system/web-proxy-panel-firewall-maintenance.timer \
+    /etc/systemd/system/web-proxy-panel-firewall-maintenance.service
 
 cat > /etc/systemd/system/web-proxy-panel-traffic.service <<'EOF'
 [Unit]
@@ -1625,13 +1757,14 @@ from urllib.parse import parse_qs, quote, urlencode, urlparse
 from collections import defaultdict, deque
 from wpp_subscriptions import PREFIX as SUB_PREFIX
 from wpp_panel_extras import preview_document
-from wpp_ui import page_layout, login_ui, dashboard_body, dashboard_page, users_ui, editor_ui, openflux_ui, client_records, nodes_ui, updates_ui
+from wpp_ui import page_layout, login_ui, dashboard_body, dashboard_page, users_ui, editor_ui, openflux_ui, client_records, nodes_ui, updates_ui, openflux_import_uri
 import wpp_metrics as server_metrics
 import wpp_update as web_updates
 import wpp_components as components
 import wpp_nodes as node_api
 import wpp_openflux as openflux
 import wpp_awg as awg
+import wpp_cdn as cdn
 
 HOST="127.0.0.1"
 PORT=8090
@@ -1646,6 +1779,7 @@ USERS="/etc/web-proxy-panel/users.json"
 TRAFFIC="/var/lib/tproxy-panel/traffic.json"
 XRAY_PATH_FILE="/etc/web-proxy-panel/xray-path"
 HYSTERIA_PORT=8443
+AWG_AVAILABLE=False
 MANAGER="/usr/local/sbin/web-proxy-panelctl"
 QR="/usr/bin/qrencode"
 LOGO="/opt/tproxy-panel/panel-logo.png"
@@ -2120,8 +2254,16 @@ def proxy_link(protocol,secret,port=443,name="Proxy",username=""):
         name=node_api.location_prefix(node_api.load_location(LOCATION_FILE))+" · "+protocol_label
     label=quote(name or "Proxy",safe="")
     if protocol=="vless":
-        query=urlencode({"encryption":"none","security":"tls","sni":DOMAIN,"fp":"chrome","type":"xhttp","host":DOMAIN,"path":xray_path(),"mode":"auto","alpn":"h2"})
-        return "vless://"+quote(secret,safe="-")+"@"+DOMAIN+":443?"+query+"#"+label
+        user=next((u for u in users() if u.get("protocol")=="vless" and any(
+            secrets.compare_digest(str(candidate),str(secret)) for candidate in
+            (u.get("device_secrets") if isinstance(u.get("device_secrets"),list) else [u.get("secret","")]))),None)
+        route=cdn.vless_route(DOMAIN,user.get("cdn") if user else None)
+        route_path=xray_path()+("-cdn" if route["enabled"] else "")
+        query_values={"encryption":"none","security":"tls","sni":route["sni"],"fp":route["fingerprint"],"type":"xhttp","host":route["host"],"path":route_path,"mode":route["mode"],"alpn":"h2"}
+        if route.get("extra"):
+            query_values["extra"]=json.dumps(route["extra"],ensure_ascii=True,separators=(",",":"))
+        query=urlencode(query_values)
+        return "vless://"+quote(secret,safe="-")+"@"+route["address"]+":443?"+query+"#"+label
     if protocol=="hysteria":
         query=urlencode({"sni":DOMAIN,"alpn":"h3"})
         return "hysteria2://"+quote(secret,safe="-")+"@"+DOMAIN+":"+str(HYSTERIA_PORT)+"/?"+query+"#"+label
@@ -2211,8 +2353,8 @@ class Handler(BaseHTTPRequestHandler):
             if not self.api_auth(): return
             if path==node_api.API_PREFIX+"/status":
                 loc=node_api.load_location(LOCATION_FILE)
-                self.send_json({"ok":True,"api_version":1,"version":"2.4.2","domain":DOMAIN,
-                    "location":loc,"capabilities":["vless","hysteria","awg20","awg31","federation"]}); return
+                self.send_json({"ok":True,"api_version":1,"version":"2.4.4","domain":DOMAIN,
+                    "location":loc,"capabilities":["vless","hysteria","federation"]}); return
             if path==node_api.API_PREFIX+"/profiles":
                 result=[]
                 for user in users():
@@ -2308,7 +2450,7 @@ class Handler(BaseHTTPRequestHandler):
             profile_id=parse_qs(urlparse(self.path).query).get("id",[""])[0]
             profile=next((item for item in openflux.profile_states() if item.get("id")==profile_id),None)
             if profile is None: self.send_html("Not found",404); return
-            try: self.send_png(qr_png_bytes(str(profile.get("url") or "")))
+            try: self.send_png(qr_png_bytes(openflux_import_uri(profile)))
             except (OSError,subprocess.SubprocessError):
                 self.send_json({'message':'Не удалось сформировать QR OpenFlux. Проверьте qrencode на сервере.'},503)
             return
@@ -2328,10 +2470,12 @@ class Handler(BaseHTTPRequestHandler):
             current_users=users()
             matching=(next((x for x in current_users if x.get("id")==uid and x.get("protocol") in awg.PROTOCOLS),None)
                       if uid else next((x for x in current_users if x.get("secret")==q or
-                          (x.get("protocol")=="mtproto" and q in x.get("device_secrets",[]))),None))
+                          q in (x.get("device_secrets") if isinstance(x.get("device_secrets"),list) else [])),None))
             if uid and matching:
                 q=matching.get("secret",""); protocol=matching.get("protocol",""); port=str(matching.get("backend_port",0))
             if q==primary(): matching={"protocol":"web","backend_port":443,"name":"Основной WEB Proxy"}
+            if matching and matching.get("protocol") in awg.PROTOCOLS and not AWG_AVAILABLE:
+                self.send_html("Not found",404); return
             if not matching or protocol!=matching.get("protocol","web"):
                 self.send_html("Not found",404); return
             try:
@@ -2345,6 +2489,8 @@ class Handler(BaseHTTPRequestHandler):
             return
 
         if path==PANEL_PATH+"/awg-config":
+            if not AWG_AVAILABLE:
+                self.send_html("Not found",404); return
             uid=parse_qs(urlparse(self.path).query).get("id",[""])[0]
             user=next((u for u in users() if u.get("id")==uid and u.get("protocol") in awg.PROTOCOLS),None)
             if user is None: self.send_html("Not found",404); return
@@ -2394,7 +2540,7 @@ class Handler(BaseHTTPRequestHandler):
                     self.send_json({"ok":True,"deleted":int(result.get("deleted",0))}); return
                 if path==node_api.API_PREFIX+"/profiles/create":
                     protocol=str(request.get("protocol","")); name=str(request.get("name","")).strip()
-                    if protocol not in ("web","mtproto","vless","hysteria","awg20","awg31") or not name or len(name)>80:
+                    if protocol not in ("web","mtproto","vless","hysteria") or not name or len(name)>80:
                         self.send_json({"ok":False,"message":"Invalid profile"},400); return
                     user=(ctl_manager_json("add-json",{"protocol":protocol,"name":name,
                         "port":request.get("port"),"devices":request.get("devices",1)})
@@ -2476,7 +2622,7 @@ class Handler(BaseHTTPRequestHandler):
             except ValueError as exc:
                 self.send_json({"message":str(exc)},400)
             except (OSError,subprocess.TimeoutExpired):
-                self.send_json({"message":"Не удалось связаться с GitLab или службой обновления."},503)
+                self.send_json({"message":"Не удалось связаться с сервисом релизов или службой обновления."},503)
             return
 
         if path==PANEL_PATH+"/node-action":
@@ -2518,12 +2664,25 @@ class Handler(BaseHTTPRequestHandler):
                                          "protocols":[p for p in ("vless","hysteria") if form.get(p)=="1"]})
                 if not result.get("ok"):
                     create_error(result.get("message","Ошибка создания подписки"),int(result.get("status",400))); return
-            elif kind in ("web","mtproto","vless","hysteria","awg20","awg31"):
+            elif kind in ("web","mtproto","vless","hysteria"):
                 try:
+                    common={"protocol":kind,"name":name,
+                        "devices":form.get("direct_devices","1"),
+                        "traffic_limit_gb":form.get("traffic_limit_gb","0")}
                     if kind=="mtproto":
-                        ctl_manager_json("add-json",{"protocol":kind,"name":name,
-                            "port":form.get("mtproto_port",""),"devices":form.get("mtproto_devices","1")})
-                    else: ctl("add",kind,name)
+                        common.update({"port":form.get("mtproto_port","")})
+                        ctl_manager_json("add-json",common)
+                    elif kind=="vless":
+                        request={**common,
+                            "vless_route":form.get("vless_route","direct"),
+                            "vless_cdn_provider":form.get("vless_cdn_provider","yandex"),
+                            "vless_cdn_public_host":form.get("vless_cdn_public_host",""),
+                            "vless_cdn_sni":form.get("vless_cdn_sni",""),
+                            "vless_cdn_host_header":form.get("vless_cdn_host_header",""),
+                            "vless_cdn_fingerprint":form.get("vless_cdn_fingerprint","chrome")}
+                        cdn.profile_from_request(request)
+                        ctl_manager_json("add-json",request)
+                    else: ctl_manager_json("add-json",common)
                 except ValueError as exc:
                     create_error(str(exc)); return
                 except Exception as exc:
@@ -2554,7 +2713,11 @@ class Handler(BaseHTTPRequestHandler):
             operation=form.get("operation","")
             try:
                 if operation=="create":
-                    openflux.create_profile(form.get("name",""),form.get("url",""),form.get("platform",""),form.get("transport","yandex"))
+                    openflux.create_profile(
+                        form.get("name",""), form.get("url",""), form.get("platform",""),
+                        form.get("transport","yandex"), form.get("max_server_token",""),
+                        form.get("max_client_token",""), form.get("max_uid","")
+                    )
                 elif operation=="enable": openflux.profile_set_enabled(form.get("id",""),True)
                 elif operation=="disable": openflux.profile_set_enabled(form.get("id",""),False)
                 elif operation=="rotate": openflux.profile_rotate(form.get("id",""))
@@ -2674,7 +2837,7 @@ class Handler(BaseHTTPRequestHandler):
             protocol=form.get("protocol","web").strip().lower()
             if not name or len(name)>80:
                 self.send_html("Имя пользователя обязательно.",400); return
-            if protocol not in ("web","mtproto","vless","hysteria","awg20","awg31"):
+            if protocol not in ("web","mtproto","vless","hysteria"):
                 self.send_html("Неизвестный протокол подключения.",400); return
             try:
                 result=ctl("add",protocol,name)
@@ -2827,7 +2990,7 @@ PY
 fi
 
 python3 -m py_compile "$APP_FILE"
-python3 -m py_compile "$APP_DIR/wpp_subscriptions.py" "$APP_DIR/wpp_panel_extras.py" "$APP_DIR/wpp_ui.py" "$APP_DIR/wpp_metrics.py" "$APP_DIR/wpp_update.py" "$APP_DIR/wpp_nodes.py" "$APP_DIR/wpp_openflux.py" "$APP_DIR/wpp_awg.py" "$APP_DIR/wpp_firewall.py" "$APP_DIR/wpp_components.py"
+python3 -m py_compile "$APP_DIR/wpp_subscriptions.py" "$APP_DIR/wpp_panel_extras.py" "$APP_DIR/wpp_ui.py" "$APP_DIR/wpp_metrics.py" "$APP_DIR/wpp_update.py" "$APP_DIR/wpp_nodes.py" "$APP_DIR/wpp_openflux.py" "$APP_DIR/wpp_awg.py" "$APP_DIR/wpp_firewall.py" "$APP_DIR/wpp_components.py" "$APP_DIR/wpp_cdn.py"
 
 
 # ---- Finish installation: service, Caddy route, permissions, start ----
@@ -2867,7 +3030,7 @@ fi
 echo "[4/6] Creating systemd service..."
 cat > "$SERVICE_FILE" <<EOF
 [Unit]
-Description=WEB PANEL PROXY V 2.4.2
+Description=WEB PANEL PROXY V 2.4.4
 After=network-online.target caddy.service tproxy-server.service mtproxy.service web-proxy-panel-firewall.service
 Wants=network-online.target
 Requires=web-proxy-panel-firewall.service
@@ -2971,7 +3134,7 @@ unlock_changes(){ flock -u 9 2>/dev/null || true; exec 9>&-; }
 
 show_info(){
     local d p version
-    d="$(domain)"; p="$(panel_path)"; version="$(cat /etc/web-proxy-panel/version 2>/dev/null || echo '2.4.2')"
+    d="$(domain)"; p="$(panel_path)"; version="$(cat /etc/web-proxy-panel/version 2>/dev/null || echo '2.4.4')"
     echo
     echo "============================================================"
     echo "                 WEB PANEL PROXY"
@@ -3214,8 +3377,9 @@ route = (
     "    handle /wpp-sub/* {\n"
     "        reverse_proxy 127.0.0.1:8090\n"
     "    }\n\n"
-    "    @web_panel_vless path " + xray_path + " " + xray_path + "/*\n"
-    "    handle @web_panel_vless {\n"
+    "    # WPP XRAY ROUTES BEGIN\n"
+    "    @web_panel_vless_direct path " + xray_path + " " + xray_path + "/*\n"
+    "    handle @web_panel_vless_direct {\n"
     "        reverse_proxy 127.0.0.1:10000 {\n"
     "            transport http {\n"
     "                versions h2c\n"
@@ -3223,6 +3387,16 @@ route = (
     "            flush_interval -1\n"
     "        }\n"
     "    }\n\n"
+    "    @web_panel_vless_cdn path " + xray_path + "-cdn " + xray_path + "-cdn/*\n"
+    "    handle @web_panel_vless_cdn {\n"
+    "        reverse_proxy 127.0.0.1:10001 {\n"
+    "            transport http {\n"
+    "                versions h2c\n"
+    "            }\n"
+    "            flush_interval -1\n"
+    "        }\n"
+    "    }\n"
+    "    # WPP XRAY ROUTES END\n\n"
     "    handle " + path + "/* {\n"
     "        reverse_proxy 127.0.0.1:8090\n"
     "    }\n\n"
@@ -3420,9 +3594,9 @@ fi
 echo
 echo "============================================================"
 if [[ "$UPDATING" == "1" ]]; then
-echo "          WEB PANEL PROXY V 2.4.2 UPDATED"
+echo "          WEB PANEL PROXY V 2.4.4 UPDATED"
 else
-echo "         WEB PANEL PROXY V 2.4.2 IS READY"
+echo "         WEB PANEL PROXY V 2.4.4 IS READY"
 fi
 echo "============================================================"
 echo

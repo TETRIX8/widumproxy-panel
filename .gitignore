@@ -1,6 +1,6 @@
-__pycache__/
-*.py[cod]
+*.zip
 *.log
-*.tmp
 .DS_Store
 Thumbs.db
+__pycache__/
+*.pyc

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Independent AmneziaWG 2.0/3.1 profiles for WEB PANEL PROXY.
+"""Retired AmneziaWG compatibility helpers for WEB PANEL PROXY.
 
 Every WPP profile owns a userspace interface, UDP port, address block, key set
 and obfuscation fingerprint.  Keeping device-level AWG parameters per profile
@@ -25,7 +25,11 @@ AWG20_MTU = 1280
 AWG31_MTU = 1100
 PORT_FIRST = 52000
 PORT_LAST = 52999
-PROTOCOLS = ("awg20", "awg31")
+# AWG is intentionally unavailable.  Keeping the module importable lets an
+# update read old users.json files without starting services or destroying
+# stored client records.  An empty protocol set makes sync() retire remaining
+# generated units/configs and prevents all new AWG operations.
+PROTOCOLS = ()
 PROFILE_SCHEMA = 2
 
 
@@ -284,6 +288,10 @@ def service_for(user):
 
 
 def sync(users):
+    if not PROTOCOLS:
+        # Feature retired: installation cleanup stops/removes the units.  Do
+        # not erase old configuration files here; they are rollback data.
+        return
     os.makedirs(CONFIG_DIR, mode=0o700, exist_ok=True)
     selected = {u["id"]: u for u in users if u.get("protocol") in PROTOCOLS and u.get("enabled", True)}
     changed = set()
@@ -333,6 +341,8 @@ def client_config(user, endpoint, name="AWG"):
 
 
 def traffic(users):
+    if not PROTOCOLS:
+        return {}
     by_key = {u.get("public_key"): u.get("id") for u in users
               if u.get("protocol") in PROTOCOLS and u.get("public_key")}
     result = {}
