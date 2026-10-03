@@ -8,19 +8,20 @@ export GIT_TERMINAL_PROMPT=0
 export GIT_CONFIG_NOSYSTEM=1
 export GIT_CONFIG_GLOBAL=/dev/null
 
-VERSION="${WEB_PANEL_PROXY_PACKAGE_VERSION:-2.4.2}"
+VERSION="${WEB_PANEL_PROXY_PACKAGE_VERSION:-2.4.5}"
 REPO_DIR="/root/tproxy-server"
 SITE_INPUT="/opt/tproxy-site"
 SITE_TARGET="/srv/tproxy-site"
 REUSE_MT=0
 REUSE_RELAY=0
 REUSE_CADDY=0
+ALLOW_CDN="${WEB_PANEL_PROXY_ALLOW_CDN:-0}"
 PRESERVE_SITE=0
 CADDY_MODE=""
 CADDY_BIN=""
 CADDY_SERVICE_EXISTS=0
 MT_PORT=2398
-CHANNEL_B64="aHR0cHM6Ly93d3cueW91dHViZS5jb20vQFBPTEVTTklFU09WRVRJMTI="
+CHANNEL_B64="aHR0cHM6Ly9naXRodWIuY29tL1RFVFJJWDgvd2lkdW1wcm94eS1wYW5lbA=="
 TPROXY_REF="52a5feb7fac38f68da5afef9cedd9b3bfc8473ca"
 
 die() {
@@ -319,7 +320,11 @@ else
     if [[ -n "$VPS_IP" && "$DNS_IP" != "$VPS_IP" ]]; then
         echo "      DNS: $DNS_IP"
         echo "      VPS: $VPS_IP"
-        die "DNS does not point to this VPS."
+        if [[ "$ALLOW_CDN" == "1" ]]; then
+            echo "      CDN/origin mode enabled; continuing with CDN-fronted DNS."
+        else
+            die "DNS does not point to this VPS. Set WEB_PANEL_PROXY_ALLOW_CDN=1 when the domain is intentionally behind a CDN."
+        fi
     fi
     echo "      $DOMAIN -> $DNS_IP"
 fi

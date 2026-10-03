@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Safe in-place updater for WIDUMPROXY V 2.4.4.
+# Safe in-place updater for WIDUMPROXY V 2.4.5.
 set -Eeuo pipefail
 umask 077
 
@@ -48,7 +48,7 @@ RELEASE_REF="$REQUESTED_REF"
 LOCAL_SOURCE=""
 if [[ "${1:-}" == "--local" ]]; then
     LOCAL_SOURCE="$(cd "$(dirname "$0")" && pwd)"
-    RELEASE_REF="v2.4.4"
+    RELEASE_REF="v2.4.5"
     for file in install-panel.sh update.sh uninstall-web-proxy.sh repair-landing-pages.sh panel-logo.png wpp_subscriptions.py wpp_panel_extras.py wpp_ui.py wpp_metrics.py wpp_update.py wpp_nodes.py wpp_openflux.py wpp_awg.py wpp_firewall.py wpp_components.py wpp_cdn.py; do
         [[ -s "$LOCAL_SOURCE/$file" ]] || { echo "Incomplete local archive: $file is missing." >&2; exit 1; }
     done
@@ -73,7 +73,7 @@ exec 9>/run/lock/web-panel-proxy.lock
 flock -n 9 || die "Another WIDUMPROXY install, update or removal is already running."
 
 echo "============================================================"
-echo "     WIDUMPROXY V 2.4.4 — SAFE UPDATE"
+echo "     WIDUMPROXY V 2.4.5 — SAFE UPDATE"
 echo "============================================================"
 echo "Users, administrator password, panel URL and site HTML will be retained."
 wpp_progress_start "Проверка установленной версии"

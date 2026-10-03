@@ -436,9 +436,9 @@ XRAY_PATH="$(cat "$XRAY_PATH_FILE")"
 [[ "$XRAY_PATH" =~ ^/vless-[a-f0-9]{24}$ ]] || die "Stored VLESS path is invalid."
 
 if [[ "$UPDATING" == "1" ]]; then
-    echo "Updating WIDUMPROXY V 2.4.4..."
+    echo "Updating WIDUMPROXY V 2.4.5..."
 else
-    echo "Configuring WIDUMPROXY V 2.4.4..."
+    echo "Configuring WIDUMPROXY V 2.4.5..."
 fi
 INSTALL_CREDENTIALS="/etc/web-proxy-panel/install-credentials"
 if [[ "$UPDATING" == "1" ]]; then
@@ -2353,7 +2353,7 @@ class Handler(BaseHTTPRequestHandler):
             if not self.api_auth(): return
             if path==node_api.API_PREFIX+"/status":
                 loc=node_api.load_location(LOCATION_FILE)
-                self.send_json({"ok":True,"api_version":1,"version":"2.4.4","domain":DOMAIN,
+                self.send_json({"ok":True,"api_version":1,"version":"2.4.5","domain":DOMAIN,
                     "location":loc,"capabilities":["vless","hysteria","federation"]}); return
             if path==node_api.API_PREFIX+"/profiles":
                 result=[]
@@ -3030,7 +3030,7 @@ fi
 echo "[4/6] Creating systemd service..."
 cat > "$SERVICE_FILE" <<EOF
 [Unit]
-Description=WIDUMPROXY V 2.4.4
+Description=WIDUMPROXY V 2.4.5
 After=network-online.target caddy.service tproxy-server.service mtproxy.service web-proxy-panel-firewall.service
 Wants=network-online.target
 Requires=web-proxy-panel-firewall.service
@@ -3134,7 +3134,7 @@ unlock_changes(){ flock -u 9 2>/dev/null || true; exec 9>&-; }
 
 show_info(){
     local d p version
-    d="$(domain)"; p="$(panel_path)"; version="$(cat /etc/web-proxy-panel/version 2>/dev/null || echo '2.4.4')"
+    d="$(domain)"; p="$(panel_path)"; version="$(cat /etc/web-proxy-panel/version 2>/dev/null || echo '2.4.5')"
     echo
     echo "============================================================"
     echo "                 WIDUMPROXY"
@@ -3594,9 +3594,9 @@ fi
 echo
 echo "============================================================"
 if [[ "$UPDATING" == "1" ]]; then
-echo "          WIDUMPROXY V 2.4.4 UPDATED"
+echo "          WIDUMPROXY V 2.4.5 UPDATED"
 else
-echo "         WIDUMPROXY V 2.4.4 IS READY"
+echo "         WIDUMPROXY V 2.4.5 IS READY"
 fi
 echo "============================================================"
 echo

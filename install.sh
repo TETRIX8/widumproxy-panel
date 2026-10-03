@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Public one-command bootstrapper for WIDUMPROXY V 2.4.4.
+# Public one-command bootstrapper for WIDUMPROXY V 2.4.5.
 set -Eeuo pipefail
 umask 077
 
@@ -10,7 +10,7 @@ export GIT_CONFIG_NOSYSTEM=1
 export GIT_CONFIG_GLOBAL=/dev/null
 
 REPOSITORY="https://github.com/TETRIX8/widumproxy-panel.git"
-RELEASE_REF="${WEB_PANEL_PROXY_REF:-v2.4.4}"
+RELEASE_REF="${WEB_PANEL_PROXY_REF:-v2.4.5}"
 
 die() { echo "ERROR: $*" >&2; exit 1; }
 [[ ${EUID:-1} -eq 0 ]] || die "Run this command with sudo or as root."
@@ -27,7 +27,7 @@ if [[ -n "$LOCAL_BASE" && -s "$LOCAL_BASE/install-final.sh" && -s "$LOCAL_BASE/w
     exec bash "$LOCAL_BASE/install-final.sh"
 fi
 
-echo "WIDUMPROXY V 2.4.4 — downloading installation files..."
+echo "WIDUMPROXY V 2.4.5 — downloading installation files..."
 
 if ! command -v git >/dev/null 2>&1; then
     export DEBIAN_FRONTEND=noninteractive

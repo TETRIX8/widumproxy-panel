@@ -2,7 +2,7 @@
   <img src="panel-logo.png" alt="WIDUMPROXY" width="190">
 </p>
 
-<h1 align="center">WIDUMPROXY 2.4.4</h1>
+<h1 align="center">WIDUMPROXY 2.4.5</h1>
 
 <p align="center">WEB Proxy, MTProto, VLESS XHTTP, Hysteria2, OpenFlux и аккуратная панель управления для собственного VPS</p>
 
@@ -17,7 +17,7 @@
 - Готовые HTML-заглушки и собственные страницы с HTML, CSS, JavaScript, SEO и аналитикой.
 - Проверка обновлений и безопасное обновление с резервной копией настроек.
 
-## Что нового в 2.4.4
+## Что нового в 2.4.5
 
 - Окно создания отдельного подключения стало компактнее и понятнее на компьютере и телефоне.
 - Для VLESS XHTTP, Hysteria2, MTProto и Web Proxy можно выдать от 1 до 20 отдельных ключей: у каждого есть собственная ссылка и QR-код.
@@ -46,7 +46,7 @@ sudo -i
 ### Установка
 
 ```bash
-apt-get -o DPkg::Lock::Timeout=600 install -y unzip && rm -rf /root/wpp-244-release && mkdir -p /root/wpp-244-release && unzip -q /root/WEB-PANEL-PROXY-V-2.4.4-RELEASE.zip -d /root/wpp-244-release && cd /root/wpp-244-release && chmod +x ./*.sh && bash ./install-final.sh
+apt-get -o DPkg::Lock::Timeout=600 install -y unzip && rm -rf /root/wpp-244-release && mkdir -p /root/wpp-244-release && unzip -q /root/WEB-PANEL-PROXY-V-2.4.5-RELEASE.zip -d /root/wpp-244-release && cd /root/wpp-244-release && chmod +x ./*.sh && bash ./install-final.sh
 ```
 
 Перед запуском загрузите архив релиза в `/root`. Установщик запросит домен, email для HTTPS-сертификата, логин и пароль панели. После установки он покажет адрес панели и данные для входа.
@@ -125,10 +125,10 @@ MIT License. Подробности находятся в файле [LICENSE](L
 
 ## WidumProxy quick install
 
-This repository is the GitHub distribution of WidumProxy v2.4.4. The installer keeps the full upstream functionality while using this repository as the source for initial installation and updates.
+This repository is the GitHub distribution of WidumProxy v2.4.5. The installer keeps the full upstream functionality while using this repository as the source for initial installation and updates.
 
 ```bash
-sudo -i bash -c 'curl -4fsSL "https://raw.githubusercontent.com/TETRIX8/widumproxy-panel/v2.4.4/install.sh" -o /tmp/widumproxy-install.sh && bash /tmp/widumproxy-install.sh; rc=$?; rm -f /tmp/widumproxy-install.sh; exit $rc'
+sudo -i bash -c 'curl -4fsSL "https://raw.githubusercontent.com/TETRIX8/widumproxy-panel/v2.4.5/install.sh" -o /tmp/widumproxy-install.sh && bash /tmp/widumproxy-install.sh; rc=$?; rm -f /tmp/widumproxy-install.sh; exit $rc'
 ```
 
 Optional non-interactive environment variables:
@@ -136,5 +136,6 @@ Optional non-interactive environment variables:
 - `WEB_PANEL_PROXY_DOMAIN` — public hostname for the panel.
 - `WEB_PANEL_PROXY_ACME_EMAIL` — email for TLS certificate notifications.
 - `WEB_PANEL_PROXY_REF` — GitHub tag or branch to install.
+- `WEB_PANEL_PROXY_ALLOW_CDN=1` — allow installation when the hostname intentionally resolves to a CDN instead of the VPS IP.
 
 The installer and updater retain the internal service names and filesystem paths for compatibility with existing deployments.
