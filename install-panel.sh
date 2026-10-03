@@ -100,7 +100,7 @@ if ! [[ "$DOMAIN" =~ ^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$ && "$DOMAIN" == *.* ]]; th
     [[ -t 0 ]] || die "The domain could not be recovered. Re-run with WEB_PANEL_PROXY_DOMAIN=proxy.example.com."
     echo "Домен старой установки не найден автоматически."
     while true; do
-        read -r -p "Введите действующий домен WEB PANEL PROXY: " DOMAIN
+        read -r -p "Введите действующий домен WIDUMPROXY: " DOMAIN
         DOMAIN="${DOMAIN#http://}"; DOMAIN="${DOMAIN#https://}"; DOMAIN="${DOMAIN%%/*}"; DOMAIN="${DOMAIN,,}"
         [[ "$DOMAIN" =~ ^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$ && "$DOMAIN" == *.* ]] && break
         echo "Некорректный домен. Пример: proxy.example.com"
@@ -218,7 +218,7 @@ AWGUP
 chmod 0755 /usr/local/sbin/web-panel-proxy-awg-run /usr/local/sbin/web-panel-proxy-awg-up
 cat > /etc/systemd/system/web-panel-proxy-awg@.service <<'EOF'
 [Unit]
-Description=WEB PANEL PROXY independent AmneziaWG profile %i
+Description=WIDUMPROXY independent AmneziaWG profile %i
 After=network-online.target web-proxy-panel-firewall.service
 Wants=network-online.target
 Requires=web-proxy-panel-firewall.service
@@ -436,9 +436,9 @@ XRAY_PATH="$(cat "$XRAY_PATH_FILE")"
 [[ "$XRAY_PATH" =~ ^/vless-[a-f0-9]{24}$ ]] || die "Stored VLESS path is invalid."
 
 if [[ "$UPDATING" == "1" ]]; then
-    echo "Updating WEB PANEL PROXY V 2.4.4..."
+    echo "Updating WIDUMPROXY V 2.4.4..."
 else
-    echo "Configuring WEB PANEL PROXY V 2.4.4..."
+    echo "Configuring WIDUMPROXY V 2.4.4..."
 fi
 INSTALL_CREDENTIALS="/etc/web-proxy-panel/install-credentials"
 if [[ "$UPDATING" == "1" ]]; then
@@ -1480,7 +1480,7 @@ chmod 0755 "$MANAGER"
 
 cat > "$FIREWALL_SERVICE_FILE" <<'EOF'
 [Unit]
-Description=WEB PANEL PROXY persistent user-port firewall
+Description=WIDUMPROXY persistent user-port firewall
 After=nftables.service
 PartOf=nftables.service
 Before=network-online.target tproxy-panel.service
@@ -1506,7 +1506,7 @@ rm -f /etc/systemd/system/web-proxy-panel-firewall-maintenance.timer \
 
 cat > /etc/systemd/system/web-proxy-panel-traffic.service <<'EOF'
 [Unit]
-Description=WEB PANEL PROXY traffic collector
+Description=WIDUMPROXY traffic collector
 After=network-online.target web-proxy-panel-firewall.service
 
 [Service]
@@ -1518,7 +1518,7 @@ EOF
 
 cat > /etc/systemd/system/web-proxy-panel-traffic.timer <<'EOF'
 [Unit]
-Description=Collect WEB PANEL PROXY traffic every 10 seconds
+Description=Collect WIDUMPROXY traffic every 10 seconds
 
 [Timer]
 OnActiveSec=5s
@@ -1534,7 +1534,7 @@ chmod 0644 /etc/systemd/system/web-proxy-panel-traffic.service /etc/systemd/syst
 # Resource metrics must not depend on the success of the proxy Stats API.
 cat > /etc/systemd/system/web-panel-proxy-metrics.service <<'EOF'
 [Unit]
-Description=WEB PANEL PROXY VPS metrics
+Description=WIDUMPROXY VPS metrics
 
 [Service]
 Type=oneshot
@@ -1547,7 +1547,7 @@ Nice=10
 EOF
 cat > /etc/systemd/system/web-panel-proxy-metrics.timer <<'EOF'
 [Unit]
-Description=Collect WEB PANEL PROXY VPS metrics every 10 seconds
+Description=Collect WIDUMPROXY VPS metrics every 10 seconds
 
 [Timer]
 OnActiveSec=5s
@@ -1678,7 +1678,7 @@ chmod 0750 /usr/local/sbin/web-panel-proxy-sync-tls
 
 cat > /etc/systemd/system/web-panel-proxy-sync-tls.service <<'EOF'
 [Unit]
-Description=Synchronize Caddy certificate for WEB PANEL PROXY Xray
+Description=Synchronize Caddy certificate for WIDUMPROXY Xray
 After=caddy.service
 
 [Service]
@@ -1689,7 +1689,7 @@ EOF
 
 cat > /etc/systemd/system/web-panel-proxy-sync-tls.timer <<'EOF'
 [Unit]
-Description=Refresh WEB PANEL PROXY Xray TLS certificate
+Description=Refresh WIDUMPROXY Xray TLS certificate
 
 [Timer]
 OnBootSec=5min
@@ -1703,7 +1703,7 @@ EOF
 
 cat > /etc/systemd/system/web-panel-proxy-xray.service <<EOF
 [Unit]
-Description=WEB PANEL PROXY Xray (VLESS and Hysteria 2)
+Description=WIDUMPROXY Xray (VLESS and Hysteria 2)
 After=network-online.target caddy.service
 Wants=network-online.target
 
@@ -2048,8 +2048,8 @@ def externalize_inline_assets(source):
     rendered=re.sub(r'\sstyle\s*=\s*(["\'])(.*?)\1',replace_inline_style,rendered,flags=re.I|re.S)
     if inline_styles:
         styles.append("\n".join(inline_styles))
-    css="/* WEB PANEL PROXY public CSS */\n"+"\n\n".join(styles) if styles else ""
-    javascript="/* WEB PANEL PROXY public JS */\n"+"\n\n".join(scripts) if scripts else ""
+    css="/* WIDUMPROXY public CSS */\n"+"\n\n".join(styles) if styles else ""
+    javascript="/* WIDUMPROXY public JS */\n"+"\n\n".join(scripts) if scripts else ""
     css_name="panel-site-"+hashlib.sha256(css.encode()).hexdigest()[:12]+".css" if css else ""
     js_name="panel-site-"+hashlib.sha256(javascript.encode()).hexdigest()[:12]+".js" if javascript else ""
     if css_name:
@@ -2122,8 +2122,8 @@ def write_site_html(source):
             # tproxy-server serves public_dir from memory; a successful
             # restart makes the edited landing page visible immediately.
             restart_public_site()
-            if css: verify_public_asset("/"+css_name,"WEB PANEL PROXY public CSS")
-            if javascript: verify_public_asset("/"+js_name,"WEB PANEL PROXY public JS")
+            if css: verify_public_asset("/"+css_name,"WIDUMPROXY public CSS")
+            if javascript: verify_public_asset("/"+js_name,"WIDUMPROXY public JS")
             verify_public_page(css_name,js_name)
             install_private_file(SITE_SOURCE,source.encode("utf-8"))
             # Keep a few prior immutable assets for rollback/open browser tabs.
@@ -3030,7 +3030,7 @@ fi
 echo "[4/6] Creating systemd service..."
 cat > "$SERVICE_FILE" <<EOF
 [Unit]
-Description=WEB PANEL PROXY V 2.4.4
+Description=WIDUMPROXY V 2.4.4
 After=network-online.target caddy.service tproxy-server.service mtproxy.service web-proxy-panel-firewall.service
 Wants=network-online.target
 Requires=web-proxy-panel-firewall.service
@@ -3058,7 +3058,7 @@ echo "[4.2/6] Installing WPP console menu..."
 install -o root -g root -m 0755 "$BASE/update.sh" /usr/local/sbin/web-panel-proxy-update
 cat > /etc/systemd/system/web-panel-proxy-web-update.service <<'UNIT'
 [Unit]
-Description=WEB PANEL PROXY administrator-requested update
+Description=WIDUMPROXY administrator-requested update
 After=network-online.target
 Wants=network-online.target
 
@@ -3075,7 +3075,7 @@ UNIT
 chmod 0644 /etc/systemd/system/web-panel-proxy-web-update.service
 cat > /etc/systemd/system/web-panel-proxy-component-update.service <<'UNIT'
 [Unit]
-Description=WEB PANEL PROXY component version manager
+Description=WIDUMPROXY component version manager
 After=network-online.target
 Wants=network-online.target
 
@@ -3101,7 +3101,7 @@ LOCK="/run/lock/web-panel-proxy.lock"
 
 die(){ echo "ОШИБКА: $*" >&2; exit 1; }
 [[ ${EUID:-1} -eq 0 ]] || die "Запустите меню от root: sudo WPP"
-[[ -s "$SERVICE" && -s "$DATA" ]] || die "WEB PANEL PROXY не установлен полностью."
+[[ -s "$SERVICE" && -s "$DATA" ]] || die "WIDUMPROXY не установлен полностью."
 
 domain(){ sed -n 's/^Environment=TPROXY_HOSTNAME=//p' "$DROPIN" 2>/dev/null | head -n1; }
 panel_path(){ sed -n 's/^Environment=WEBPROXY_PANEL_PATH=//p' "$SERVICE" 2>/dev/null | head -n1; }
@@ -3137,7 +3137,7 @@ show_info(){
     d="$(domain)"; p="$(panel_path)"; version="$(cat /etc/web-proxy-panel/version 2>/dev/null || echo '2.4.4')"
     echo
     echo "============================================================"
-    echo "                 WEB PANEL PROXY"
+    echo "                 WIDUMPROXY"
     echo "============================================================"
     printf 'Версия:          %s\n' "$version"
     printf 'Домен:           %s\n' "$d"
@@ -3279,14 +3279,14 @@ maintain_ssl(){
 
 run_remove(){
     echo
-    echo "Запускается полное удаление WEB PANEL PROXY..."
+    echo "Запускается полное удаление WIDUMPROXY..."
     exec /usr/local/sbin/web-panel-proxy-uninstall
 }
 
 while true; do
     clear 2>/dev/null || true
     echo "============================================================"
-    echo "              WEB PANEL PROXY — WPP MENU"
+    echo "              WIDUMPROXY — WPP MENU"
     echo "============================================================"
     echo "  1) Информация"
     echo "  2) Обновить"
@@ -3418,7 +3418,7 @@ s = re.sub(
 def enable_http_challenge(text, hostname):
     match = re.search(r'(?m)^\s*' + re.escape(hostname) + r'\s*\{\s*$', text)
     if not match:
-        raise SystemExit("WEB PANEL PROXY Caddy site block was not found")
+        raise SystemExit("WIDUMPROXY Caddy site block was not found")
     opening = text.find('{', match.start(), match.end())
     depth = 0
     closing = None
@@ -3431,7 +3431,7 @@ def enable_http_challenge(text, hostname):
                 closing = index + 1
                 break
     if closing is None:
-        raise SystemExit("WEB PANEL PROXY Caddy site block is incomplete")
+        raise SystemExit("WIDUMPROXY Caddy site block is incomplete")
     block = text[match.start():closing]
     block = re.sub(r'(?m)^\s*disable_http_challenge\s*\n?', '', block)
     return text[:match.start()] + block + text[closing:]
@@ -3594,9 +3594,9 @@ fi
 echo
 echo "============================================================"
 if [[ "$UPDATING" == "1" ]]; then
-echo "          WEB PANEL PROXY V 2.4.4 UPDATED"
+echo "          WIDUMPROXY V 2.4.4 UPDATED"
 else
-echo "         WEB PANEL PROXY V 2.4.4 IS READY"
+echo "         WIDUMPROXY V 2.4.4 IS READY"
 fi
 echo "============================================================"
 echo
@@ -3631,8 +3631,8 @@ echo "  ${PASS}"
 echo
 fi
 echo "YouTube:"
-echo "  https://www.youtube.com/@POLESNIESOVETI12"
+echo "  https://github.com/TETRIX8/widumproxy-panel"
 echo
-echo "GitLab:"
-echo "  https://gitlab.com/POLESNIESOVETI12/web-panel-proxy"
+echo "GitHub:"
+echo "  https://github.com/TETRIX8/widumproxy-panel"
 echo "============================================================"

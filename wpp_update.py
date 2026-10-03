@@ -11,7 +11,7 @@ ROOT = Path('/var/lib/web-panel-proxy-update')
 STATUS = ROOT / 'status.json'
 VERSION = Path('/etc/web-proxy-panel/version')
 UNIT = 'web-panel-proxy-web-update.service'
-REPO = 'https://gitlab.com/POLESNIESOVETI12/web-panel-proxy.git'
+REPO = 'https://github.com/TETRIX8/widumproxy-panel.git'
 UPDATER = '/usr/local/sbin/web-panel-proxy-update'
 
 
@@ -23,7 +23,7 @@ def failure_message(log_path):
         return 'Обновление завершилось ошибкой. Журнал обновления недоступен.'
     cases = (
         (('ssl connection timeout', 'connection timed out', 'could not resolve host'),
-         'Не удалось скачать файлы релиза: GitLab недоступен или соединение прервано.'),
+         'Не удалось скачать файлы релиза: GitHub недоступен или соединение прервано.'),
         (('openflux-linux-amd64 is missing', 'missing assets/openflux-linux-amd64', 'openflux checksum verification failed'),
          'Пакет OpenFlux отсутствует или повреждён.'),
         (('xray checksum verification failed',), 'Архив Xray не прошёл проверку целостности.'),
@@ -100,14 +100,14 @@ def check_release():
         env = {**os.environ, 'GIT_TERMINAL_PROMPT': '0'}
         try:
             r = subprocess.run(['git', 'ls-remote', '--tags', '--refs', REPO, 'v[0-9]*'], capture_output=True, text=True, timeout=20, env=env)
-            if r.returncode: raise ValueError('GitLab недоступен. Повторите позже.')
+            if r.returncode: raise ValueError('GitHub недоступен. Повторите позже.')
             tags = re.findall(r'refs/tags/(v\d+\.\d+\.\d+)\s*$', r.stdout, re.M)
             if not tags: raise ValueError('Опубликованные стабильные теги не найдены.')
             tags = sorted(set(tags), key=version_tuple, reverse=True)[:30]
             latest = tags[0]
             state.update(latest=latest, releases=tags, checked=int(time.time()), phase='checked', message='Версии загружены.')
         except (OSError, subprocess.TimeoutExpired):
-            raise ValueError('Не удалось проверить GitLab. Повторите позже.')
+            raise ValueError('Не удалось проверить GitHub. Повторите позже.')
         atomic_json(STATUS, state)
         return get_status()
 

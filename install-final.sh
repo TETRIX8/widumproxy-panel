@@ -51,7 +51,7 @@ done
     die "Package is incomplete: wpp-panel/flags.tar.gz is missing. Extract the complete archive."
 command -v flock >/dev/null 2>&1 || die "flock is required (package: util-linux)."
 exec 9>/run/lock/web-panel-proxy.lock
-flock -n 9 || die "Another WEB PANEL PROXY install, update or removal is already running."
+flock -n 9 || die "Another WIDUMPROXY install, update or removal is already running."
 cleanup_credentials() {
     if [[ -f /etc/web-proxy-panel/install-credentials ]]; then
         command -v shred >/dev/null 2>&1 && shred -u /etc/web-proxy-panel/install-credentials 2>/dev/null || \
@@ -64,7 +64,7 @@ trap finish_install EXIT
 wpp_progress_start "Проверка пакета"
 wpp_progress 5 "Подготовка сервера"
 
-echo "WEB PANEL PROXY V 2.4.4: preparing server..."
+echo "WIDUMPROXY V 2.4.4: preparing server..."
 
 PANEL_UPDATE=0
 if [[ -s /var/lib/tproxy-panel/data.json ]] &&

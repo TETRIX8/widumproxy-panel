@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Reconcile only the UFW rules owned by WEB PANEL PROXY.
+"""Reconcile only the UFW rules owned by WIDUMPROXY.
 
 The module deliberately never enables/disables UFW and never removes an
 administrator-created rule.  It works from /etc/ufw/ufw.conf instead of the
@@ -16,7 +16,7 @@ from pathlib import Path
 
 STATE = Path("/etc/web-proxy-panel/ufw-owned.json")
 UFW_CONFIG = Path("/etc/ufw/ufw.conf")
-COMMENT = "WEB PANEL PROXY"
+COMMENT = "WIDUMPROXY"
 
 
 class FirewallError(RuntimeError):

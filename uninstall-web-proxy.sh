@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# WEB PANEL PROXY complete removal utility.
+# WIDUMPROXY complete removal utility.
 set -Eeuo pipefail
 
 WPP_PROGRESS_TTY=0 WPP_PROGRESS_ROWS=0 WPP_PROGRESS_LAST=-1 WPP_PROGRESS_ACTIVE=0
@@ -39,11 +39,11 @@ trap 'wpp_progress_finish "$?"' EXIT
 [[ ${EUID:-1} -eq 0 ]] || { echo "Run this script as root." >&2; exit 1; }
 command -v flock >/dev/null 2>&1 || { echo "flock is required (package: util-linux)." >&2; exit 1; }
 exec 9>/run/lock/web-panel-proxy.lock
-flock -n 9 || { echo "Another WEB PANEL PROXY install, update or removal is already running." >&2; exit 1; }
+flock -n 9 || { echo "Another WIDUMPROXY install, update or removal is already running." >&2; exit 1; }
 
 INSTALLED_VERSION="$(cat /etc/web-proxy-panel/version 2>/dev/null || echo unknown)"
-echo "WEB PANEL PROXY V ${INSTALLED_VERSION} — complete removal"
-echo "Removing all WEB PANEL PROXY components..."
+echo "WIDUMPROXY V ${INSTALLED_VERSION} — complete removal"
+echo "Removing all WIDUMPROXY components..."
 wpp_progress_start "Подготовка удаления"
 
 DOMAIN="$(sed -n 's/^Environment=TPROXY_HOSTNAME=//p' /etc/systemd/system/caddy.service.d/tproxy.conf 2>/dev/null | head -n1 || true)"
@@ -233,7 +233,7 @@ PY
   [[ "$PRESERVE_CADDY" == 1 ]] && rm -f -- /etc/caddy/Caddyfile.before-web-panel-proxy
 fi
 
-echo "Removing WEB PANEL PROXY files..."
+echo "Removing WIDUMPROXY files..."
 wpp_progress 55 "Удаление файлов панели"
 if [[ -s /opt/tproxy-panel/wpp_firewall.py ]]; then
   PYTHONPATH=/opt/tproxy-panel python3 -c 'import wpp_firewall; wpp_firewall.purge()' 2>/dev/null || true
@@ -332,14 +332,14 @@ elif [[ "$PRESERVE_CADDY" == 1 ]]; then
   systemctl daemon-reload
   if command -v caddy >/dev/null 2>&1 && caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile >/dev/null 2>&1; then
     systemctl restart caddy.service 2>/dev/null || true
-    echo "Other Caddy sites were preserved; only the WEB PANEL PROXY site block was removed."
+    echo "Other Caddy sites were preserved; only the WIDUMPROXY site block was removed."
   else
     echo "WARNING: preserved Caddy configuration requires manual validation."
   fi
 else
   rm -f -- /etc/systemd/system/caddy.service.d/tproxy.conf
   rmdir /etc/systemd/system/caddy.service.d 2>/dev/null || true
-  echo "Caddy was preserved because it was not marked as installed by WEB PANEL PROXY."
+  echo "Caddy was preserved because it was not marked as installed by WIDUMPROXY."
 fi
 
 id mtproxy >/dev/null 2>&1 && userdel mtproxy 2>/dev/null || true
@@ -351,4 +351,4 @@ id wpp-openflux >/dev/null 2>&1 && userdel wpp-openflux 2>/dev/null || true
 systemctl daemon-reload
 systemctl reset-failed 2>/dev/null || true
 wpp_progress 100 "Удаление завершено"
-echo "WEB PANEL PROXY V ${INSTALLED_VERSION} has been removed."
+echo "WIDUMPROXY V ${INSTALLED_VERSION} has been removed."

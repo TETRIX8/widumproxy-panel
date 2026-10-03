@@ -1,8 +1,8 @@
 <p align="center">
-  <img src="panel-logo.png" alt="WEB PANEL PROXY" width="190">
+  <img src="panel-logo.png" alt="WIDUMPROXY" width="190">
 </p>
 
-<h1 align="center">WEB PANEL PROXY 2.4.4</h1>
+<h1 align="center">WIDUMPROXY 2.4.4</h1>
 
 <p align="center">WEB Proxy, MTProto, VLESS XHTTP, Hysteria2, OpenFlux и аккуратная панель управления для собственного VPS</p>
 
@@ -72,7 +72,7 @@ apt-get -o DPkg::Lock::Timeout=600 install -y unzip && rm -rf /root/wpp-244-rele
 /usr/local/sbin/web-panel-proxy-uninstall
 ```
 
-> **Внимание:** удаление выполняется без дополнительного подтверждения и стирает пользователей, ключи, конфигурации, службы и сайт WEB PANEL PROXY.
+> **Внимание:** удаление выполняется без дополнительного подтверждения и стирает пользователей, ключи, конфигурации, службы и сайт WIDUMPROXY.
 
 ## Сеть и порты
 
@@ -117,9 +117,24 @@ ss -lntup
 
 ## Ссылки
 
-- [GitLab проекта](https://gitlab.com/POLESNIESOVETI12/web-panel-proxy)
-- [YouTube автора](https://www.youtube.com/@POLESNIESOVETI12)
+- [GitHub проекта](https://github.com/TETRIX8/widumproxy-panel)
 
 ## Лицензия
 
 MIT License. Подробности находятся в файле [LICENSE](LICENSE).
+
+## WidumProxy quick install
+
+This repository is the GitHub distribution of WidumProxy v2.4.4. The installer keeps the full upstream functionality while using this repository as the source for initial installation and updates.
+
+```bash
+sudo -i bash -c 'curl -4fsSL "https://raw.githubusercontent.com/TETRIX8/widumproxy-panel/v2.4.4/install.sh" -o /tmp/widumproxy-install.sh && bash /tmp/widumproxy-install.sh; rc=$?; rm -f /tmp/widumproxy-install.sh; exit $rc'
+```
+
+Optional non-interactive environment variables:
+
+- `WEB_PANEL_PROXY_DOMAIN` — public hostname for the panel.
+- `WEB_PANEL_PROXY_ACME_EMAIL` — email for TLS certificate notifications.
+- `WEB_PANEL_PROXY_REF` — GitHub tag or branch to install.
+
+The installer and updater retain the internal service names and filesystem paths for compatibility with existing deployments.

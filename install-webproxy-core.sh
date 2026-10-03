@@ -141,7 +141,7 @@ on_error() {
 }
 trap on_error ERR
 
-echo "Configuring WEB PANEL PROXY V ${VERSION}..."
+echo "Configuring WIDUMPROXY V ${VERSION}..."
 
 [[ $EUID -eq 0 ]] || die "Run this installer as root."
 [[ "$(uname -m)" == "x86_64" ]] || die "x86_64 is required."
@@ -392,7 +392,7 @@ s = open(index, encoding="utf-8").read()
 m = re.search(r"<style\b[^>]*>(.*?)</style\s*>", s, flags=re.I | re.S)
 if not m:
     raise SystemExit("Default public page has no style block")
-css = "/* WEB PANEL PROXY default public CSS */\n" + m.group(1).strip() + "\n"
+css = "/* WIDUMPROXY default public CSS */\n" + m.group(1).strip() + "\n"
 s = s[:m.start()] + '<link rel="stylesheet" href="/styles.css">' + s[m.end():]
 open(stylesheet, "w", encoding="utf-8").write(css)
 open(index, "w", encoding="utf-8").write(s)
@@ -724,7 +724,7 @@ text = re.sub(
 text = re.sub(r'(?m)^\s*auto_https\s+disable_redirects\s*\n?', '', text)
 text = re.sub(r'\A\s*\{\s*\}\s*', '', text, count=1)
 if not re.search(r'(?m)^\s*' + re.escape(domain) + r'\s*\{\s*$', text):
-    raise SystemExit("WEB PANEL PROXY Caddy site block was not found")
+    raise SystemExit("WIDUMPROXY Caddy site block was not found")
 text = re.sub(
     r'\n?\s*# WPP HTTP REDIRECT BEGIN\n.*?\n\s*# WPP HTTP REDIRECT END\n?',
     '\n', text, flags=re.S,
@@ -745,7 +745,7 @@ def enable_http_challenge(source, hostname):
                 closing = index + 1
                 break
     if closing is None:
-        raise SystemExit("WEB PANEL PROXY Caddy site block is incomplete")
+        raise SystemExit("WIDUMPROXY Caddy site block is incomplete")
     block = source[match.start():closing]
     block = re.sub(r'(?m)^\s*disable_http_challenge\s*\n?', '', block)
     return source[:match.start()] + block + source[closing:]

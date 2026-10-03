@@ -173,7 +173,7 @@ def _unit_text(config=None):
     codec = _codec_for(config)
     transport = _transport_for(config)
     return f"""[Unit]
-Description=WEB PANEL PROXY OpenFlux exit node
+Description=WIDUMPROXY OpenFlux exit node
 After=network-online.target
 Wants=network-online.target
 ConditionPathExists={ENABLED_FILE}
@@ -466,7 +466,7 @@ def _extra_unit_text(config):
     else:
         transport_arguments = f'--transport={transport} --url "$$(cat {paths["url"]})"'
     return f"""[Unit]
-Description=WEB PANEL PROXY OpenFlux profile {config['id']}
+Description=WIDUMPROXY OpenFlux profile {config['id']}
 After=network-online.target
 Wants=network-online.target
 ConditionPathExists={paths['enabled']}

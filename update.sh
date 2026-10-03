@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Safe in-place updater for WEB PANEL PROXY V 2.4.4.
+# Safe in-place updater for WIDUMPROXY V 2.4.4.
 set -Eeuo pipefail
 umask 077
 
@@ -42,7 +42,7 @@ export GIT_TERMINAL_PROMPT=0
 export GIT_CONFIG_NOSYSTEM=1
 export GIT_CONFIG_GLOBAL=/dev/null
 
-REPOSITORY="https://gitlab.com/POLESNIESOVETI12/web-panel-proxy.git"
+REPOSITORY="https://github.com/TETRIX8/widumproxy-panel.git"
 REQUESTED_REF="${WEB_PANEL_PROXY_REF:-}"
 RELEASE_REF="$REQUESTED_REF"
 LOCAL_SOURCE=""
@@ -70,10 +70,10 @@ die() { echo "ERROR: $*" >&2; exit 1; }
 [[ ${EUID} -eq 0 ]] || die "Run as root: sudo -i"
 command -v flock >/dev/null 2>&1 || die "flock is required (package: util-linux)."
 exec 9>/run/lock/web-panel-proxy.lock
-flock -n 9 || die "Another WEB PANEL PROXY install, update or removal is already running."
+flock -n 9 || die "Another WIDUMPROXY install, update or removal is already running."
 
 echo "============================================================"
-echo "     WEB PANEL PROXY V 2.4.4 — SAFE UPDATE"
+echo "     WIDUMPROXY V 2.4.4 — SAFE UPDATE"
 echo "============================================================"
 echo "Users, administrator password, panel URL and site HTML will be retained."
 wpp_progress_start "Проверка установленной версии"
@@ -288,7 +288,7 @@ fi
 
 if [[ -z "$LOCAL_SOURCE" ]]; then
 if [[ -z "$RELEASE_REF" ]]; then
-    echo "Checking the latest published WEB PANEL PROXY version..."
+    echo "Checking the latest published WIDUMPROXY version..."
     RELEASE_REF="$(git ls-remote --tags --refs "$REPOSITORY" 'v[0-9]*' |
         awk -F/ '{print $3}' | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n1)"
 fi
@@ -298,7 +298,7 @@ echo "Selected release: $RELEASE_REF"
 CURRENT_VERSION="$(cat /etc/web-proxy-panel/version 2>/dev/null || true)"
 if [[ -z "$REQUESTED_REF" && "$CURRENT_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+([.+~-][A-Za-z0-9.+~-]+)?$ ]] &&
    dpkg --compare-versions "$CURRENT_VERSION" ge "${RELEASE_REF#v}"; then
-    echo "WEB PANEL PROXY ${CURRENT_VERSION} is already the latest published stable version."
+    echo "WIDUMPROXY ${CURRENT_VERSION} is already the latest published stable version."
     exit 0
 fi
 fi
@@ -314,7 +314,7 @@ finish() {
 }
 trap finish EXIT
 
-echo "Downloading WEB PANEL PROXY files..."
+echo "Downloading WIDUMPROXY files..."
 wpp_progress 25 "Получение файлов обновления"
 if [[ -n "$LOCAL_SOURCE" ]]; then
     install -d -m 0700 "$TEMP_DIR/source"

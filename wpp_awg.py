@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Retired AmneziaWG compatibility helpers for WEB PANEL PROXY.
+"""Retired AmneziaWG compatibility helpers for WIDUMPROXY.
 
 Every WPP profile owns a userspace interface, UDP port, address block, key set
 and obfuscation fingerprint.  Keeping device-level AWG parameters per profile
